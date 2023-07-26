@@ -17,7 +17,7 @@ COPY . .
 RUN go build -ldflags="-w -s -X codello.dev/govanity/cmd/version.Version=$VERSION" -o build/govanity .
 
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch
+FROM --platform=${TARGETPLATFORM:-linux/amd64} gcr.io/distroless/static
 
 COPY --from=builder /work/build/govanity /govanity
 
