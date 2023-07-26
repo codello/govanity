@@ -22,5 +22,6 @@ FROM --platform=${TARGETPLATFORM:-linux/amd64} gcr.io/distroless/static
 COPY --from=builder /work/build/govanity /govanity
 
 EXPOSE 8080
+EXPOSE 9090
 USER nonroot:nonroot
 ENTRYPOINT ["/govanity"]
