@@ -5,6 +5,7 @@ ARG TARGETARCH
 
 FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:alpine as builder
 
+RUN apk add --no-cache git
 WORKDIR /work
 
 COPY go.mod go.sum ./
