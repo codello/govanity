@@ -1,0 +1,28 @@
+on: [push, pull_request]
+
+name: CI
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+      - name: Check Formatting
+        run: gofmt -l .
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: go.mod
+      - name: Fetch Dependencies
+        run: go get .
+      - name: Build govanity
+        run: go build -o build/ -ldflags "-X main.version=" -v .
