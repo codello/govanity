@@ -1,5 +1,9 @@
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  packages: write
+
 name: CI
 jobs:
   lint:
