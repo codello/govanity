@@ -1,53 +1,30 @@
-package server
+package main
 
 import (
 	_ "embed"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
-	"os"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 var (
-	listenAddress string // bind address for the server
+	noCache       bool // whether to send the Cache-Control header
+	cacheMaxAge int  // max-age cache control
+	maxStaleAge int  // max-stale cache control
+	errorAge    int  // stale-if-error cache control
 
 	//go:embed index.html.tmpl
 	tmplData string             // template used for 200 OK responses
 	tmpl     *template.Template // parsed tmplData
 )
 
-// Command is the command that runs the govanity server.
-var Command = &cobra.Command{
-	Use:     "server [flags] package_mapping ...",
-	Short:   "Run the govanity server",
-	Example: "  govanity server go.codello.dev/govanity=github.com/codello/govanity",
-	Long: `govanity is a simple server for Go vanity URLs.
-
-The configuration is done entirely via the command line by specifying package
-mappings. A package mapping looks like this:
-  prefix=[vcs:]repo-root
-This maps the package prefix to the repo root using the vcs protocol. If vcs is
-not present, it defaults to git.
-
-If the prefix starts with a / the prefix will be matched independently of the
-hostname of the request. The server will then prepend the hostname of the
-request to the package name. Use this if you want to map the prefix to a repo,
-regardless of the hostname used to resolve the package.
-If the prefix does not start with a / the first path component is assumed to be
-the hostname. The prefix will only match if the request hostname matches this
-part of the prefix and the part matches the corresponding prefix.
-`,
-	RunE: runServer,
-	Args: cobra.MinimumNArgs(1),
-}
-
 func init() {
 	// Command setup
-	Command.Flags().StringVarP(&listenAddress, "listen-address", "l", ":8080", "The address on which the server runs.")
+	cmd.Flags().BoolVarP(&noCache, "no-cache", "", false, "Disables the Cache-Control header.")
+	cmd.Flags().IntVarP(&cacheMaxAge, "cache-max-age", "", 604800, "Cache-Control max-age value.")
+	cmd.Flags().IntVarP(&errorAge, "cache-stale-if-error", "", 86400, "Cache-Control stale-if-error value.")
+	cmd.Flags().IntVarP(&maxStaleAge, "cache-max-stale", "", 3600, "Cache-Control max-stale value.")
 
 	// Prepare template
 	tmpl = template.Must(template.New("package").Funcs(map[string]any{
@@ -56,19 +33,17 @@ func init() {
 }
 
 // runServer actually runs the server command.
-func runServer(_ *cobra.Command, args []string) error {
-	for _, spec := range args {
+func setupServer(specs []string) error {
+	for _, spec := range specs {
 		prefix, vcs, repoRoot, err := ParsePackageMapping(spec)
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(1)
+			return err
 		}
 		h := PackageHandler(prefix, vcs, repoRoot)
 		http.Handle(prefix, h)
 		http.Handle(prefix+"/", h)
 	}
-	log.Printf("Running on %s\n", listenAddress)
-	return http.ListenAndServe(listenAddress, nil)
+	return nil
 }
 
 // ParsePackageMapping converts a "prefix=[vcs:]repo-root" spec into prefix, vcs and repoRoot.
@@ -115,6 +90,9 @@ func ParsePackageMapping(spec string) (prefix, vcs, repoRoot string, err error) 
 func PackageHandler(prefix string, vcs string, repoRoot string) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if !noCache {
+			w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d, max-stale=%d, stale-if-error=%d", cacheMaxAge, maxStaleAge, maxStaleAge))
+		}
 		w.WriteHeader(http.StatusOK)
 		if strings.HasPrefix(prefix, "/") {
 			prefix = r.Host + prefix

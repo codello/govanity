@@ -13,7 +13,7 @@ govanity is a simple implementation that matches pagages against known **prefixe
 You can run `govanity` like this:
 
 ```shell
-govanity server [mappings...]
+govanity [mappings...]
 ```
 
 Each of the `mappings` is a string of the format `prefix=[vcs:]repo-root` where `prefix` is the import name of a package, `repo-root` is the location of the repository containing the code and `vcs` is the version control system. If `vcs` is not specified it defaults to `git`.

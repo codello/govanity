@@ -23,4 +23,4 @@ COPY --from=builder /work/build/govanity /govanity
 
 EXPOSE 8080
 USER nonroot:nonroot
-ENTRYPOINT ["/govanity", "server"]
+ENTRYPOINT ["/govanity"]
