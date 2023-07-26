@@ -14,7 +14,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -ldflags="-w -s -X codello.dev/govanity/cmd/version.Version=$VERSION" -o build/govanity .
+RUN go build -ldflags="-w -s -X main.Version=$VERSION" -o build/govanity .
 
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} gcr.io/distroless/static

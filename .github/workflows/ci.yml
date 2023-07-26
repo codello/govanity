@@ -48,7 +48,7 @@ jobs:
       - name: Build govanity
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            go build -o build/ -ldflags "-w -s -X codello.dev/govanity/cmd/version.Version=$GITHUB_REF_NAME" -v .
+            go build -o build/ -ldflags "-w -s -X main.Version=$GITHUB_REF_NAME" -v .
           else
             go build -o build/ -v .
           fi
