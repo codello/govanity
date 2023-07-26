@@ -11,7 +11,7 @@ ENV CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} VERSION=${VERSION}
 WORKDIR /work
 
 COPY go.mod go.sum ./
-RUN go get .
+RUN go mod download
 
 COPY . .
 RUN go build -ldflags="-w -s -X codello.dev/govanity/cmd/version.Version=$VERSION" -o build/govanity .
@@ -21,5 +21,6 @@ FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch
 
 COPY --from=builder /work/build/govanity /govanity
 
+EXPOSE 8080
 USER nonroot:nonroot
 ENTRYPOINT ["/govanity", "server"]

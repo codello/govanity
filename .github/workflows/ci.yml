@@ -40,7 +40,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Fetch Dependencies
-        run: go get .
+        run: go mod download
       - name: Build govanity
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
