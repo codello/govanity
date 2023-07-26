@@ -25,11 +25,11 @@ var Command = &cobra.Command{
 }
 
 var (
-	// The version string as set in the git tag.
+	// The Version string as set in the git tag.
 	// The format is expected to be v1.2.3 or v1.2.3-pre where pre is a prerelease identifier.
 	// Except for the "v" prefix the format should be a semantic version without build info.
 	// Set via ldflags.
-	version string
+	Version string
 	// jsonOutput indicates whether the version should be printed in JSON format.
 	jsonOutput bool
 )
@@ -90,9 +90,9 @@ func getVersionInfo() *versionInfo {
 	v := &versionInfo{
 		GoVersion: info.GoVersion,
 	}
-	if version != "" {
-		v.GitVersion = version
-		comps := strings.SplitN(strings.TrimPrefix(version, "v"), "-", 2)
+	if Version != "" {
+		v.GitVersion = Version
+		comps := strings.SplitN(strings.TrimPrefix(Version, "v"), "-", 2)
 		if len(comps) >= 2 {
 			v.Prerelease = comps[1]
 		}
