@@ -51,10 +51,11 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - name: Setup Go
+        uses: magnetikonline/action-golang-cache@v4
         with:
           go-version-file: go.mod
+          cache-key-suffix: ${{ matrix.platform }}
       - name: Fetch Dependencies
         run: go mod download
       - name: Split Platform Identifer
@@ -85,7 +86,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: [build]
+    needs: [test, build]
     if: ${{ github.event_name == 'push' }}
     uses: ./.github/workflows/publish.yml
     with:
