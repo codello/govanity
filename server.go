@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	noCache       bool // whether to send the Cache-Control header
+	noCache     bool // whether to send the Cache-Control header
 	cacheMaxAge int  // max-age cache control
 	maxStaleAge int  // max-stale cache control
 	errorAge    int  // stale-if-error cache control

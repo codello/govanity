@@ -34,7 +34,6 @@ func printVersion() {
 		dirty = ".dirty"
 	}
 	fmt.Printf("govanity %s+git.%s%s (built with %s)\n", info.GitVersion, info.GitCommit, dirty, info.GoVersion)
-	return
 }
 
 // versionInfo contains the data for the version command output.

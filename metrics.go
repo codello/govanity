@@ -20,6 +20,8 @@ func startMetricsServer() {
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.Handler())
 		log.Printf("Metrics running on %s\n", metricsAddress)
-		go http.ListenAndServe(metricsAddress, mux)
+		go func() {
+			_ = http.ListenAndServe(metricsAddress, mux)
+		}()
 	}
 }
