@@ -59,7 +59,7 @@ jobs:
         run: go mod download
       - name: Split Platform Identifer
         id: platform
-        run:
+        run: |
           echo "os=${PLATFORM%%/*}" >> "$GITHUB_OUTPUT"
           echo "arch=${PLATFORM#*/}" >> "$GITHUB_OUTPUT"
         env:
