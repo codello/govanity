@@ -24,7 +24,7 @@ jobs:
       - name: Download Artifcat
         uses: actions/download-artifact@v3
         with:
-          name: govanity
+          name: build
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to GitHub Container Registry

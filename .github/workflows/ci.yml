@@ -79,8 +79,8 @@ jobs:
       - name: Upload Binary
         uses: actions/upload-artifact@v3
         with:
-          name: govanity
-          path: build/${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}/govanity
+          name: build
+          path: ./**/build/${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}/govanity
           if-no-files-found: error
           retention-days: 1
 
