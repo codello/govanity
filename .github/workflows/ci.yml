@@ -1,10 +1,17 @@
-on: [push, pull_request]
-
-permissions:
-  contents: read
-  packages: write
-
 name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["*"]
+
+env:
+  PLATFORMS: >
+    ["linux/amd64",
+    "linux/arm64",
+    "linux/386",
+    "linux/arm"]
+
 jobs:
   lint:
     name: Lint
@@ -18,6 +25,7 @@ jobs:
         run: go vet ./...
       - name: Check Formatting
         run: gofmt -l .
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -32,10 +40,13 @@ jobs:
         run: go get .
       - name: Run Tests
         run: go test ./...
+
   build:
-    name: Build Binary
-    needs: [test]
+    name: Build for ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: ${{ fromJSON(env.PLATFORMS) }}
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -45,44 +56,36 @@ jobs:
           go-version-file: go.mod
       - name: Fetch Dependencies
         run: go mod download
+      - name: Split Platform Identifer
+        id: platform
+        run:
+          echo "os=${PLATFORM%%/*}" >> "$GITHUB_OUTPUT"
+          echo "arch=${PLATFORM#*/}" >> "$GITHUB_OUTPUT"
+        env:
+          PLATFORM: ${{ matrix.platform }}
       - name: Build govanity
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            go build -o build/ -ldflags "-w -s -X main.Version=$GITHUB_REF_NAME" -v .
+            go build -o build/$GOOS-$GOARCH/ -ldflags "-w -s -X main.Version=$GITHUB_REF_NAME" -v .
           else
-            go build -o build/ -v .
+            go build -o build/$GOOS-$GOARCH/ -v .
           fi
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ steps.platform.outputs.os }}
+          GOARCH: ${{ steps.platform.outputs.arch }}
       - name: Upload Binary
         uses: actions/upload-artifact@v3
         with:
           name: govanity
-          path: build/govanity
-  build-image:
-    name: Build Image
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate Tags
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/${{ github.repository }}
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          build-args: |
-            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
-            VERSION=${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          platforms: linux/amd64,linux/arm64
-          provenance: false
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          path: build/${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}/govanity
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish
+    needs: [build]
+    if: ${{ github.event_name == 'push' }}
+    uses: ./.github/workflows/publish.yml
+    with:
+      platforms: ${{ join(fromJSON(env.PLATFORMS), ',') }}
