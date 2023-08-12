@@ -2,8 +2,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
-    tags: ["*"]
+    branches: [ main ]
+    tags: [ "*" ]
 
 permissions:
   contents: read
@@ -29,7 +29,7 @@ jobs:
   publish:
     name: Publish
     if: ${{ github.event_name == 'push' }}
-    needs: [test, build]
+    needs: [ test, build ]
     permissions:
       contents: read
       packages: write
