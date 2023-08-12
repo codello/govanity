@@ -17,6 +17,11 @@ on:
         type: string
         required: false
         default: "linux/amd64"
+      tags:
+        description: "A list of build tags passed to go build."
+        type: string
+        required: false
+        default: ""
       flags:
         description: "Additional flags passed to the go binary."
         type: string
@@ -46,25 +51,25 @@ jobs:
         id: platforms
         run: |
           echo -n "json=" >> "$GITHUB_OUTPUT"
-          echo "$PLATFORMS" | sed 's/ //g' | jq --raw-input --compact-output 'split(",")' >> "$GITHUB_OUTPUT"
+          echo "$PLATFORMS" | jq --raw-input --compact-output 'split(",") | map(gsub("^\\s+|\\s+$";""))' >> "$GITHUB_OUTPUT"
         env:
           PLATFORMS: ${{ inputs.platforms }}
       - name: Prepare Packages
         id: packages
         run: |
           echo -n "json=" >> "$GITHUB_OUTPUT"
-          echo "$PACKAGES" | sed 's/ //g' | jq --raw-input --compact-output 'split(",")' >> "$GITHUB_OUTPUT"
+          echo "$PACKAGES" | jq --raw-input --compact-output 'split(",") | map(gsub("^\\s+|\\s+$";""))' >> "$GITHUB_OUTPUT"
         env:
           PACKAGES: ${{ inputs.packages }}
 
   build:
     name: Build for ${{ matrix.platform }}
     needs: [ prepare ]
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
         package: ${{ fromJSON(needs.prepare.outputs.packages) }}
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -96,14 +101,15 @@ jobs:
       - name: Build ${{ steps.vars.outputs.package-name }}
         run: |
           if [[ "${{ needs.prepare.outputs.artifact }}" == "true" ]]; then
-            go build -ldflags "$LDFLAGS" -o "$BUILD_DIR/$PLATFORM/" -v $PACKAGE
+            go build --tags="$TAGS" -ldflags "$LDFLAGS" -o "$BUILD_DIR/$PLATFORM/" -v $PACKAGE
           else
-            go build -ldflags "$LDFLAGS" -v $PACKAGE
+            go build --tags="$TAGS" -ldflags "$LDFLAGS" -v $PACKAGE
           fi
         env:
           BUILD_DIR: ${{ inputs.build-dir }}
           PLATFORM: ${{ matrix.platform }}
           PACKAGE: ${{ matrix.package }}
+          TAGS: ${{ inputs.tags }}
           GOFLAGS: ${{ inputs.flags }}
           LDFLAGS: ${{ inputs.ldflags }}
           GOOS: ${{ steps.vars.outputs.os }}
