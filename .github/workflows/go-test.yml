@@ -59,7 +59,7 @@ jobs:
         env:
           VERSIONS: ${{ inputs.go-versions }}
   test:
-    name: Run Tests
+    name: Run Tests on ${{ matrix.package }} (${{ matrix.test-on }}, Go ${{ matrix.go-version }})
     needs: [ prepare ]
     strategy:
       matrix:

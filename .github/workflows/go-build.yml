@@ -116,7 +116,7 @@ jobs:
           GOARCH: ${{ steps.vars.outputs.arch }}
           CGO_ENABLED: 0
       - name: Upload Binary
-        if: ${{ needs.prepare.outputs.artifact }}
+        if: ${{ fromJSON(needs.prepare.outputs.artifact) }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.artifact }}
