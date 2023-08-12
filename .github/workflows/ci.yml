@@ -25,7 +25,7 @@ jobs:
     uses: codello/.github/.github/workflows/go-build.yml@v0
     with:
       platforms: linux/amd64,linux/arm64,linux/arm,linux/386
-      ldflags: -w -s -X main.Version="${{ github.ref_type == 'tag' && github.ref_name || '' }}"
+      ldflags: -w -s -X "main.Version=${{ github.ref_type == 'tag' && github.ref_name || '' }}"
 
   publish:
     name: Publish
