@@ -1,0 +1,119 @@
+name: Go Build
+on:
+  workflow_call:
+    inputs:
+      artifact:
+        description: "Name of the generated artifact. If empty disable artifact generation."
+        type: string
+        required: false
+        default: "build"
+      packages:
+        description: "A comma-separated list of packages to be built."
+        type: string
+        required: false
+        default: "."
+      platforms:
+        description: "A comma-separated list of platforms for which to build the image."
+        type: string
+        required: false
+        default: "linux/amd64"
+      flags:
+        description: "Additional flags passed to the go binary."
+        type: string
+        required: false
+        default: ""
+      ldflags:
+        description: "Additional flags passed to the go linker."
+        type: string
+        required: false
+        default: ""
+      build-dir:
+        description: "The name of the directory in which to store build artifacts."
+        type: string
+        required: false
+        default: "build"
+
+jobs:
+  prepare:
+    name: Prepare Build
+    runs-on: ubuntu-latest
+    outputs:
+      platforms: ${{ steps.platforms.outputs.json }}
+      packages: ${{ steps.packages.outputs.json }}
+      artifact: ${{ inputs.artifact && inputs.artifact != 'false' }}
+    steps:
+      - name: Prepare Platforms
+        id: platforms
+        run: |
+          echo -n "json=" >> "$GITHUB_OUTPUT"
+          echo "$PLATFORMS" | sed 's/ //g' | jq --raw-input --compact-output 'split(",")' >> "$GITHUB_OUTPUT"
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
+      - name: Prepare Packages
+        id: packages
+        run: |
+          echo -n "json=" >> "$GITHUB_OUTPUT"
+          echo "$PACKAGES" | sed 's/ //g' | jq --raw-input --compact-output 'split(",")' >> "$GITHUB_OUTPUT"
+        env:
+          PACKAGES: ${{ inputs.packages }}
+
+  build:
+    name: Build for ${{ matrix.platform }}
+    needs: [ prepare ]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
+        package: ${{ fromJSON(needs.prepare.outputs.packages) }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Prepare Build
+        id: vars
+        run: |
+          echo "os=${PLATFORM%%/*}" >> "$GITHUB_OUTPUT"
+          echo "arch=${PLATFORM#*/}" >> "$GITHUB_OUTPUT"
+          echo -n "package-name=" >> "$GITHUB_OUTPUT"
+          
+          pkg_id=$(echo "$PACKAGE" | cut -d " " -f1)
+          if [[ "$pkg_id" == "." ]]; then
+            basename "$PWD" >> $GITHUB_OUTPUT
+          elif [[ "$pkg_id" == *"/..." ]]; then
+            echo "Packages" >> "$GITHUB_OUTPUT"
+          else
+            basename "$pkg_id" >> $GITHUB_OUTPUT
+          fi
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          PACKAGE: ${{ matrix.package }}
+      - name: Setup Go
+        uses: magnetikonline/action-golang-cache@v4
+        with:
+          go-version-file: go.mod
+          cache-key-suffix: ${{ matrix.platform }}
+      - name: Fetch Dependencies
+        run: go mod download
+      - name: Build ${{ steps.vars.outputs.package-name }}
+        run: |
+          if [[ "${{ needs.prepare.outputs.artifact }}" == "true" ]]; then
+            go build -ldflags "$LDFLAGS" -o "$BUILD_DIR/$PLATFORM/" -v $PACKAGE
+          else
+            go build -ldflags "$LDFLAGS" -v $PACKAGE
+          fi
+        env:
+          BUILD_DIR: ${{ inputs.build-dir }}
+          PLATFORM: ${{ matrix.platform }}
+          PACKAGE: ${{ matrix.package }}
+          GOFLAGS: ${{ inputs.flags }}
+          LDFLAGS: ${{ inputs.ldflags }}
+          GOOS: ${{ steps.vars.outputs.os }}
+          GOARCH: ${{ steps.vars.outputs.arch }}
+          CGO_ENABLED: 0
+      - name: Upload Binary
+        if: ${{ needs.prepare.outputs.artifact }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.artifact }}
+          path: ${{ inputs.build-dir }}/
+          if-no-files-found: error
+          retention-days: 1

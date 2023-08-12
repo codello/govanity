@@ -5,7 +5,18 @@ on:
       platforms:
         description: "A comma-separated list of platforms for which to build the image."
         type: string
-        required: true
+        required: false
+        default: linux/amd64
+      artifact:
+        description: "Name of the artifact to download."
+        type: string
+        default: "build"
+        required: false
+      path:
+        description: "Path where the artifact will be downloaded."
+        type: string
+        required: false
+        default: "build"
 
 permissions:
   contents: read
@@ -22,9 +33,11 @@ jobs:
       - name: Check out Code
         uses: actions/checkout@v3
       - name: Download Artifcat
+        if: ${{ inputs.artifact && inputs.artifact != 'false' }}
         uses: actions/download-artifact@v3
         with:
-          name: build
+          name: ${{ inputs.artifact }}
+          path: ${{ inputs.path }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to GitHub Container Registry

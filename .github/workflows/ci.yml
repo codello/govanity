@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint
+    name: Lint Code
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
@@ -39,55 +39,15 @@ jobs:
         run: go test ./...
 
   build:
-    name: Build for ${{ matrix.platform }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-          - linux/arm
-          - linux/386
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-      - name: Setup Go
-        uses: magnetikonline/action-golang-cache@v4
-        with:
-          go-version-file: go.mod
-          cache-key-suffix: ${{ matrix.platform }}
-      - name: Fetch Dependencies
-        run: go mod download
-      - name: Split Platform Identifer
-        id: platform
-        run: |
-          echo "os=${PLATFORM%%/*}" >> "$GITHUB_OUTPUT"
-          echo "arch=${PLATFORM#*/}" >> "$GITHUB_OUTPUT"
-        env:
-          PLATFORM: ${{ matrix.platform }}
-      - name: Build govanity
-        run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            go build -o build/$GOOS-$GOARCH/ -ldflags "-w -s -X main.Version=$GITHUB_REF_NAME" -v .
-          else
-            go build -o build/$GOOS-$GOARCH/ -v .
-          fi
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ steps.platform.outputs.os }}
-          GOARCH: ${{ steps.platform.outputs.arch }}
-      - name: Upload Binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: build
-          path: ./**/build/${{ steps.platform.outputs.os }}-${{ steps.platform.outputs.arch }}/govanity
-          if-no-files-found: error
-          retention-days: 1
+    name: Build
+    uses: ./.github/workflows/go-build.yml
+    with:
+      platforms: linux/amd64,linux/arm64,linux/arm,linux/386
 
   publish:
-    name: Publish
+    name: Publish Docker Image
     needs: [test, build]
     if: ${{ github.event_name == 'push' }}
-    uses: ./.github/workflows/publish.yml
+    uses: ./.github/workflows/docker-publish.yml
     with:
       platforms: linux/amd64,linux/arm64,linux/arm,linux/386
