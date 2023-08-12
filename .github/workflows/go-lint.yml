@@ -1,0 +1,45 @@
+name: CI
+on:
+  workflow_call:
+    inputs:
+      dir:
+        description: "Directory to be linted. Not used with golangci-lint."
+        type: string
+        required: false
+        default: "."
+      only-new-issues:
+        description: "Show only new issues if it's a pull request."
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+      - name: Run GolangCI-Lint
+        id: golangci
+        if: ${{ hashFiles('.golangci.yml', '.golangci.yaml', '.golangci.toml', '.golangci.json') != '' }}
+        uses: golangci/golangci-lint-action@v3
+        with:
+          only-new-issues: ${{ inputs.only-new-issues }}
+      - name: Run gofmt
+        if: ${{ steps.golangci.conclusion == 'skipped' }}
+        working-directory: ${{ inputs.dir }}
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            exit 1
+          fi
+      - name: Run go vet
+        if: ${{ steps.golangci.conclusion == 'skipped' }}
+        working-directory: ${{ inputs.dir }}
+        run: go vet ./...

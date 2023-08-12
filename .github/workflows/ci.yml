@@ -7,21 +7,14 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   lint:
-    name: Lint Code
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-      - name: Vet Code
-        run: go vet ./...
-      - name: Check Formatting
-        run: gofmt -l .
+    name: Lint
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/go-lint.yml
 
   test:
     name: Test
@@ -35,8 +28,11 @@ jobs:
 
   publish:
     name: Publish
-    needs: [test, build]
     if: ${{ github.event_name == 'push' }}
+    needs: [test, build]
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/docker-publish.yml
     with:
       platforms: linux/amd64,linux/arm64,linux/arm,linux/386

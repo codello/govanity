@@ -38,6 +38,9 @@ on:
         required: false
         default: "build"
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     name: Prepare Build
