@@ -24,6 +24,7 @@ jobs:
     name: Build
     uses: codello/.github/.github/workflows/go-build.yml@v0
     with:
+      artifact-pattern: ${{ github.event.repository.name }}-{0}
       platforms: linux/amd64,linux/arm64,linux/arm,linux/386
       ldflags: -w -s -X "main.Version=${{ github.ref_type == 'tag' && github.ref_name || '' }}"
 
@@ -36,4 +37,4 @@ jobs:
       packages: write
     uses: codello/.github/.github/workflows/docker-publish.yml@v0
     with:
-      platforms: linux/amd64,linux/arm64,linux/arm,linux/386
+      artifact-pattern: ${{ github.event.repository.name }}-linux*
