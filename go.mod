@@ -1,6 +1,6 @@
 module codello.dev/govanity
 
-go 1.21.7
+go 1.22.1
 
 require (
 	github.com/prometheus/client_golang v1.19.0
