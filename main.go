@@ -2,12 +2,30 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 )
+
+var (
+	version       bool
+	logFormat     string
+	listenAddress string // bind address for the server
+)
+
+func init() {
+	cmd.SetHelpCommand(&cobra.Command{
+		Use:    "no-help",
+		Hidden: true,
+	})
+	cmd.Flags().BoolVarP(&version, "version", "v", false, "Display hte version and exit.")
+	cmd.Flags().StringVar(&logFormat, "log", "color", "The logging format. Specify 'json' for JSON logs.")
+	cmd.Flags().StringVarP(&listenAddress, "listen-address", "l", ":8080", "The address on which the server runs.")
+}
 
 // cmd is the starting point of the govanity program.
 var cmd = &cobra.Command{
@@ -32,47 +50,39 @@ the hostname. The prefix will only match if the request hostname matches this
 part of the prefix and the part matches the corresponding prefix.
 `,
 	CompletionOptions: cobra.CompletionOptions{HiddenDefaultCmd: true},
-	RunE:              run,
-}
+	RunE: func(_ *cobra.Command, args []string) error {
+		if version {
+			printVersion()
+			return nil
+		}
 
-var (
-	version       bool
-	listenAddress string // bind address for the server
-)
-
-func init() {
-	cmd.SetHelpCommand(&cobra.Command{
-		Use:    "no-help",
-		Hidden: true,
-	})
-	cmd.Flags().BoolVarP(&version, "version", "v", false, "Display hte version and exit.")
-	cmd.Flags().StringVarP(&listenAddress, "listen-address", "l", ":8080", "The address on which the server runs.")
-}
-
-func run(_ *cobra.Command, args []string) error {
-	if version {
-		printVersion()
-		return nil
-	}
-	setupHealthcheck()
-	if err := setupServer(args); err != nil {
-		return err
-	}
-	startMetricsServer()
-	log.Printf("Running on %s\n", listenAddress)
-	return http.ListenAndServe(listenAddress, logRequest(http.DefaultServeMux))
-}
-
-func logRequest(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s%s\n", r.RemoteAddr, r.Method, r.Host, r.URL)
-		handler.ServeHTTP(w, r)
-	})
+		var logger *slog.Logger
+		switch logFormat {
+		case "color":
+			logger = slog.New(tint.NewHandler(os.Stdout, nil))
+		case "json":
+			logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+		default:
+			logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+		}
+		for _, spec := range args {
+			m, err := ParsePackageMapping(spec)
+			if err != nil {
+				return err
+			}
+			handler := CacheControl(m)
+			http.Handle(fmt.Sprintf("GET %s", m.Prefix), handler)
+			http.Handle(fmt.Sprintf("GET %s/", m.Prefix), handler)
+		}
+		http.HandleFunc("GET /health", healthcheck)
+		http.Handle("GET /metrics", promhttp.Handler())
+		logger.Info(fmt.Sprintf("Running on %s", listenAddress))
+		return http.ListenAndServe(listenAddress, RequestLogger(logger)(http.DefaultServeMux))
+	},
 }
 
 func main() {
-	if err := cmd.Execute(); err != nil {
-		fmt.Println(err)
+	if cmd.Execute() != nil {
 		os.Exit(1)
 	}
 }
