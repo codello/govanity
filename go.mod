@@ -1,6 +1,6 @@
 module codello.dev/govanity
 
-go 1.22.6
+go 1.23.0
 
 require (
 	github.com/lmittmann/tint v1.0.5
