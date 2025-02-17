@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/lmittmann/tint v1.0.7
 	github.com/prometheus/client_golang v1.20.5
-	github.com/spf13/cobra v1.9.0
+	github.com/spf13/cobra v1.9.1
 )
 
 require (
