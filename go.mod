@@ -3,7 +3,7 @@ module codello.dev/govanity
 go 1.24.3
 
 require (
-	github.com/lmittmann/tint v1.0.7
+	github.com/lmittmann/tint v1.1.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.9.1
 )
